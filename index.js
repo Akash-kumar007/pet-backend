@@ -5,7 +5,6 @@ const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 const petMatingRoutes = require('./routes/petMating');
 const path = require('path');
-const authRoutes = require('./routes/auth');
 
 dotenv.config();
 // Initialize express app
