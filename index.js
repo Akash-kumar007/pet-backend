@@ -3,6 +3,9 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
+const petMatingRoutes = require('./routes/petMating');
+const path = require('path');
+const authRoutes = require('./routes/auth');
 
 dotenv.config();
 // Initialize express app
@@ -91,6 +94,71 @@ app.post('/api/book', (req, res) => {
 app.get('/api/bookings', (req, res) => {
   res.json(bookings);
 });
+
+
+//Book a Grooming Appointment start
+// Define the Schema and Model
+const bookingSchema = new mongoose.Schema({
+  ownerName: String,
+  petName: String,
+  petType: String,
+  service: String,
+  date: String,
+  time: String,
+});
+
+const Booking = mongoose.model('Book-grooming', bookingSchema);
+
+// POST Route to Save the Booking
+app.post('/api/book-groom-appointment', async (req, res) => {
+  try {
+    const { ownerName, petName, petType, service, date, time } = req.body;
+
+    // Create a new booking document
+    const newBooking = new Booking({
+      ownerName,
+      petName,
+      petType,
+      service,
+      date,
+      time,
+    });
+
+    // Save to MongoDB
+    await newBooking.save();
+
+    res.status(200).json({ message: 'Booking submitted successfully!', booking: newBooking });
+  } catch (error) {
+    res.status(500).json({ message: 'Error while submitting booking', error });
+  }
+});
+//Book a Grooming Appointment end
+
+
+
+//pet-mating start
+
+// Environment variables
+require('dotenv').config();
+
+// Middleware
+app.use(express.json());
+app.use(cors());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Routes
+app.use('/api', petMatingRoutes);
+
+// MongoDB connection
+mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => {
+    console.log('MongoDB connected');
+  })
+  .catch(err => {
+    console.log('MongoDB connection error:', err);
+  });
+//pet-mating-end
+
 
 // Start the server
 app.listen(PORT, () => {
