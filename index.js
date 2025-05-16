@@ -5,11 +5,12 @@ const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 const petMatingRoutes = require('./routes/petMating');
 const path = require('path');
+const PetTicket = require('./models/PetTicket');
 
 dotenv.config();
 // Initialize express app
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Use middleware
 app.use(cors());
@@ -137,26 +138,89 @@ app.post('/api/book-groom-appointment', async (req, res) => {
 
 //pet-mating start
 
-// Environment variables
-require('dotenv').config();
+// MongoDB connection
+mongoose.connect('mongodb://127.0.0.1:27017/petMatingDB', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+}).then(() => console.log('MongoDB Connected'))
+  .catch(err => console.error(err));
 
-// Middleware
-app.use(express.json());
-app.use(cors());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+  // Mongoose Schema
+const matingSchema = new mongoose.Schema({
+    ownerName: String,
+    contact: String,
+    petName: String,
+    petType: String,
+    breed: String,
+    gender: String,
+    age: Number,
+    location: String,
+    description: String,
+}, { timestamps: true });
 
-// Routes
-app.use('/api', petMatingRoutes);
+const MatingRequest = mongoose.model('MatingRequest', matingSchema);
+
+// POST Route
+app.post('/api/mating-requests', async (req, res) => {
+    try {
+        const newRequest = new MatingRequest(req.body);
+        await newRequest.save();
+        res.status(201).json({ message: 'Request submitted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+//pet-mating-end
+
+
+//pet friendlys cafs start
 
 // MongoDB connection
-mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => {
-    console.log('MongoDB connected');
-  })
-  .catch(err => {
-    console.log('MongoDB connection error:', err);
-  });
-//pet-mating-end
+mongoose.connect('mongodb://127.0.0.1:27017/petcafe', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+}).then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB error:', err));
+
+// POST: Book a table
+app.post('/api/book', async (req, res) => {
+  try {
+    const { name, date, time, cafe, location } = req.body;
+    const booking = new Booking({ name, date, time, cafe, location });
+    await booking.save();
+    res.json({ message: 'Booking confirmed successfully!' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Booking failed. Try again.' });
+  }
+});
+//pet friendlys cafs start
+
+//pet friendlys cafs end
+
+
+//pet ticketing start
+
+// MongoDB connection
+mongoose.connect('mongodb://127.0.0.1:27017/petservices', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('MongoDB connected'))
+.catch(err => console.error('MongoDB error:', err));
+
+// API endpoint
+app.post('/api/pet-ticket', async (req, res) => {
+  try {
+    const newTicket = new PetTicket(req.body);
+    await newTicket.save();
+    res.json({ success: true, message: 'Booking saved!' });
+  } catch (err) {
+    console.error("MongoDB error:", err);
+    res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+});
+//pet ticketing end
 
 
 // Start the server
