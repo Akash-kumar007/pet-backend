@@ -3,27 +3,31 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
-const petMatingRoutes = require('./routes/petMating');
 const path = require('path');
-const PetTicket = require('./models/PetTicket');
 
+// Load environment variables
 dotenv.config();
+
 // Initialize express app
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Use middleware
+// Middleware
 app.use(cors());
-app.use(bodyParser.json()); // This will allow us to parse incoming JSON data
-dotenv.config();
+app.use(bodyParser.json());
 
-// MongoDB Connection (using the URI from environment variables or fallback to localhost)
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/Pet-service')
-  .then(() => console.log('MongoDB connected'))
-  .catch((err) => console.error('MongoDB connection error:', err));
+// ✅ Connect to MongoDB once
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/petservice', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('MongoDB connected'))
+.catch((err) => console.error('MongoDB connection error:', err));
 
 
-// Define the Appointment Schema
+// ✅ Define all schemas & models here (using single DB)
+
+// 1. Appointment Schema
 const appointmentSchema = new mongoose.Schema({
   petName: String,
   ownerName: String,
@@ -33,10 +37,68 @@ const appointmentSchema = new mongoose.Schema({
   service: String,
   doctor: String,
 });
-
 const Appointment = mongoose.model('Appointment', appointmentSchema);
 
-// Route to save appointment data
+// 2. Contact Schema
+const contactSchema = new mongoose.Schema({
+  name: String,
+  email: String,
+  phone: String,
+  message: String,
+  createdAt: { type: Date, default: Date.now }
+});
+const Contact = mongoose.model('Contact', contactSchema);
+
+// 3. Grooming Booking Schema
+const groomingBookingSchema = new mongoose.Schema({
+  ownerName: String,
+  petName: String,
+  petType: String,
+  service: String,
+  date: String,
+  time: String,
+});
+const GroomingBooking = mongoose.model('GroomingBooking', groomingBookingSchema);
+
+// 4. Mating Request Schema
+const matingSchema = new mongoose.Schema({
+  ownerName: String,
+  contact: String,
+  petName: String,
+  petType: String,
+  breed: String,
+  gender: String,
+  age: Number,
+  location: String,
+  description: String,
+}, { timestamps: true });
+const MatingRequest = mongoose.model('MatingRequest', matingSchema);
+
+// 5. Pet Café Booking Schema
+const cafeBookingSchema = new mongoose.Schema({
+  name: String,
+  date: String,
+  time: String,
+  cafe: String,
+  location: String,
+});
+const CafeBooking = mongoose.model('CafeBooking', cafeBookingSchema);
+
+// 6. Pet Ticket Schema
+const petTicketSchema = new mongoose.Schema({
+  petName: String,
+  ownerName: String,
+  travelDate: String,
+  destination: String,
+  seatType: String,
+  specialNeeds: String,
+});
+const PetTicket = mongoose.model('PetTicket', petTicketSchema);
+
+
+// ✅ Routes
+
+// Appointment Route
 app.post('/api/appointment', async (req, res) => {
   try {
     const newAppointment = new Appointment(req.body);
@@ -47,183 +109,69 @@ app.post('/api/appointment', async (req, res) => {
   }
 });
 
-// Create Contact Schema
-const contactSchema = new mongoose.Schema({
-  name: String,
-  email: String,
-  phone: String,
-  message: String,
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-});
-
-// Create Contact Model
-const Contact = mongoose.model('Contact', contactSchema);
-
-// API Route
+// Contact Route
 app.post('/api/contact', async (req, res) => {
   try {
-    const { name, email, phone, message } = req.body;
-
-    // Save contact data
-    const newContact = new Contact({ name, email, phone, message });
+    const newContact = new Contact(req.body);
     await newContact.save();
-
     res.status(200).json({ message: 'Contact form submitted successfully' });
   } catch (error) {
-    console.error('Error saving contact data:', error);
     res.status(500).json({ message: 'Server error, please try again later' });
   }
 });
 
-// In-memory booking data (can be replaced with MongoDB)
-const bookings = [];
-
-// POST endpoint for booking
-app.post('/api/book', (req, res) => {
-  const booking = req.body;
-  console.log("Received booking:", booking);
-
-  bookings.push(booking); // Save to in-memory array
-  res.status(200).json({ message: 'Booking successful!', data: booking });
-});
-
-// Optional: check all bookings
-app.get('/api/bookings', (req, res) => {
-  res.json(bookings);
-});
-
-
-//Book a Grooming Appointment start
-// Define the Schema and Model
-const bookingSchema = new mongoose.Schema({
-  ownerName: String,
-  petName: String,
-  petType: String,
-  service: String,
-  date: String,
-  time: String,
-});
-
-const Booking = mongoose.model('Book-grooming', bookingSchema);
-
-// POST Route to Save the Booking
+// Grooming Booking
 app.post('/api/book-groom-appointment', async (req, res) => {
   try {
-    const { ownerName, petName, petType, service, date, time } = req.body;
-
-    // Create a new booking document
-    const newBooking = new Booking({
-      ownerName,
-      petName,
-      petType,
-      service,
-      date,
-      time,
-    });
-
-    // Save to MongoDB
+    const newBooking = new GroomingBooking(req.body);
     await newBooking.save();
-
     res.status(200).json({ message: 'Booking submitted successfully!', booking: newBooking });
   } catch (error) {
     res.status(500).json({ message: 'Error while submitting booking', error });
   }
 });
-//Book a Grooming Appointment end
 
-
-
-//pet-mating start
-
-// MongoDB connection
-mongoose.connect('mongodb://127.0.0.1:27017/petMatingDB', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-}).then(() => console.log('MongoDB Connected'))
-  .catch(err => console.error(err));
-
-  // Mongoose Schema
-const matingSchema = new mongoose.Schema({
-    ownerName: String,
-    contact: String,
-    petName: String,
-    petType: String,
-    breed: String,
-    gender: String,
-    age: Number,
-    location: String,
-    description: String,
-}, { timestamps: true });
-
-const MatingRequest = mongoose.model('MatingRequest', matingSchema);
-
-// POST Route
+// Pet Mating Request
 app.post('/api/mating-requests', async (req, res) => {
-    try {
-        const newRequest = new MatingRequest(req.body);
-        await newRequest.save();
-        res.status(201).json({ message: 'Request submitted successfully' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-//pet-mating-end
-
-
-//pet friendlys cafs start
-
-// MongoDB connection
-mongoose.connect('mongodb://127.0.0.1:27017/petcafe', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB error:', err));
-
-// POST: Book a table
-app.post('/api/book', async (req, res) => {
   try {
-    const { name, date, time, cafe, location } = req.body;
-    const booking = new Booking({ name, date, time, cafe, location });
-    await booking.save();
-    res.json({ message: 'Booking confirmed successfully!' });
+    const newRequest = new MatingRequest(req.body);
+    await newRequest.save();
+    res.status(201).json({ message: 'Request submitted successfully' });
   } catch (err) {
-    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Pet Café Booking
+app.post('/api/book-cafe', async (req, res) => {
+  try {
+    const newCafeBooking = new CafeBooking(req.body);
+    await newCafeBooking.save();
+    res.json({ message: 'Cafe booking confirmed successfully!' });
+  } catch (err) {
     res.status(500).json({ message: 'Booking failed. Try again.' });
   }
 });
-//pet friendlys cafs start
 
-//pet friendlys cafs end
-
-
-//pet ticketing start
-
-// MongoDB connection
-mongoose.connect('mongodb://127.0.0.1:27017/petservices', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('MongoDB connected'))
-.catch(err => console.error('MongoDB error:', err));
-
-// API endpoint
+// Pet Ticketing
 app.post('/api/pet-ticket', async (req, res) => {
   try {
     const newTicket = new PetTicket(req.body);
     await newTicket.save();
     res.json({ success: true, message: 'Booking saved!' });
   } catch (err) {
-    console.error("MongoDB error:", err);
     res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 });
-//pet ticketing end
 
 
-// Start the server
+// ✅ Start server with error handling
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use`);
+  } else {
+    console.error('Server error:', err);
+  }
 });
