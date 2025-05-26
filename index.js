@@ -1,9 +1,11 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const multer = require('multer');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 const path = require('path');
+
 
 // Load environment variables
 dotenv.config();
@@ -11,6 +13,8 @@ dotenv.config();
 // Initialize express app
 const app = express();
 const PORT = process.env.PORT || 5001;
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 // Middleware
 app.use(cors());
@@ -163,6 +167,92 @@ app.post('/api/pet-ticket', async (req, res) => {
     res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 });
+
+
+//profileform start
+// MongoDB connection
+mongoose.connect('mongodb://127.0.0.1:27017/profileDB', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB error:', err));
+
+// Multer setup
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+  filename: (req, file, cb) =>
+    cb(null, Date.now() + '-' + file.originalname)
+});
+const upload = multer({ storage });
+
+// Mongoose schema
+const userSchema = new mongoose.Schema({
+  username: String,
+  email: String,
+  contact: String,
+  gender: String,
+  location: String,
+  dob: String,
+  bio: String,
+  profileImage: String
+});
+const User = mongoose.model('User', userSchema);
+
+// POST user
+app.post('/api/user', upload.single('profileImage'), async (req, res) => {
+  const { username, email, contact, gender, location,dob, bio } = req.body;
+  const profileImage = req.file ? req.file.path : null;
+
+  try {
+    const existing = await User.findOne({ email });
+    if (existing) {
+      await User.updateOne({ email }, {
+        username, contact, gender, location,dob, bio, profileImage
+      });
+      return res.status(200).send('Updated');
+    }
+
+    const newUser = new User({
+      username, email, contact, gender, location, dob, bio, profileImage
+    });
+
+    await newUser.save();
+    res.status(200).send('User saved');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Failed to save user');
+  }
+});app.put('/api/user/:email', async (req, res) => {
+  const { email } = req.params;
+  const updateData = req.body;
+
+  try {
+    const user = await User.findOneAndUpdate(
+      { email },
+      { $set: updateData },
+      { new: true }
+    );
+    if (!user) return res.status(404).send('User not found');
+    res.status(200).json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Failed to update user');
+  }
+});
+
+// GET user by email
+app.get('/api/user/:email', async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.params.email });
+    if (!user) return res.status(404).send('User not found');
+    res.json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error fetching user');
+  }
+});
+
+//profileview ends
 
 
 // ✅ Start server with error handling
