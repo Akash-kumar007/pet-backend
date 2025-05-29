@@ -7,8 +7,6 @@ const dotenv = require('dotenv');
 const path = require('path');
 
 
-// Load environment variables
-dotenv.config();
 
 // Initialize express app
 const app = express();
@@ -18,8 +16,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json());
-
+app.use(express.json()); 
 // ✅ Connect to MongoDB once
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/petservice', {
   useNewUrlParser: true,
@@ -43,6 +40,16 @@ const appointmentSchema = new mongoose.Schema({
 });
 const Appointment = mongoose.model('Appointment', appointmentSchema);
 
+// POST route to save appointment
+app.post('/api/appointment', async (req, res) => {
+  try {
+    const newAppointment = new Appointment(req.body);
+    await newAppointment.save();
+    res.status(200).json({ message: 'Appointment saved' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
 // 2. Contact Schema
 const contactSchema = new mongoose.Schema({
   name: String,
@@ -159,14 +166,17 @@ app.post('/api/book-cafe', async (req, res) => {
 
 // Pet Ticketing
 app.post('/api/pet-ticket', async (req, res) => {
+  console.log("Incoming Pet Ticket Request:", req.body); // ✅ Add this
   try {
     const newTicket = new PetTicket(req.body);
     await newTicket.save();
     res.json({ success: true, message: 'Booking saved!' });
   } catch (err) {
+    console.error("Error saving pet ticket:", err); // ✅ Log the actual error
     res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 });
+
 
 
 //profileform start
