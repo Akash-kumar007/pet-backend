@@ -170,12 +170,6 @@ app.post('/api/pet-ticket', async (req, res) => {
 
 
 //profileform start
-// MongoDB connection
-mongoose.connect('mongodb://127.0.0.1:27017/profileDB', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB error:', err));
 
 // Multer setup
 const storage = multer.diskStorage({
@@ -201,7 +195,7 @@ const User = mongoose.model('User', userSchema);
 // POST user
 app.post('/api/user', upload.single('profileImage'), async (req, res) => {
   const { username, email, contact, gender, location,dob, bio } = req.body;
-  const profileImage = req.file ? req.file.path : null;
+  const profileImage = req.file ? `/uploads/${req.file.filename}` : null;
 
   try {
     const existing = await User.findOne({ email });
@@ -217,12 +211,13 @@ app.post('/api/user', upload.single('profileImage'), async (req, res) => {
     });
 
     await newUser.save();
-    res.status(200).send('User saved');
+res.status(200).json({ message: 'User saved', profileImage });
   } catch (err) {
     console.error(err);
     res.status(500).send('Failed to save user');
   }
-});app.put('/api/user/:email', async (req, res) => {
+});
+ app.put('/api/user/:email', async (req, res) => {
   const { email } = req.params;
   const updateData = req.body;
 
