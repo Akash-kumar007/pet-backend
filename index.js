@@ -2,31 +2,24 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const multer = require('multer');
-const bodyParser = require('body-parser');
-const dotenv = require('dotenv');
 const path = require('path');
-
-
+const dotenv = require('dotenv');
+// Load .env variables
+dotenv.config();
 
 // Initialize express app
 const app = express();
 const PORT = process.env.PORT || 5001;
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 
 // Middleware
 app.use(cors());
-app.use(express.json()); 
-// ✅ Connect to MongoDB once
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/petservice', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('MongoDB connected'))
-.catch((err) => console.error('MongoDB connection error:', err));
+app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
-// ✅ Define all schemas & models here (using single DB)
+/* ========= Schemas and Models ========= */
+
+
 
 // 1. Appointment Schema
 const appointmentSchema = new mongoose.Schema({
@@ -40,16 +33,6 @@ const appointmentSchema = new mongoose.Schema({
 });
 const Appointment = mongoose.model('Appointment', appointmentSchema);
 
-// POST route to save appointment
-app.post('/api/appointment', async (req, res) => {
-  try {
-    const newAppointment = new Appointment(req.body);
-    await newAppointment.save();
-    res.status(200).json({ message: 'Appointment saved' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-});
 // 2. Contact Schema
 const contactSchema = new mongoose.Schema({
   name: String,
@@ -107,89 +90,7 @@ const petTicketSchema = new mongoose.Schema({
 const PetTicket = mongoose.model('PetTicket', petTicketSchema);
 
 
-// ✅ Routes
-
-// Appointment Route
-app.post('/api/appointment', async (req, res) => {
-  try {
-    const newAppointment = new Appointment(req.body);
-    await newAppointment.save();
-    res.status(201).json({ message: 'Appointment saved successfully' });
-  } catch (err) {
-    res.status(500).json({ message: 'Error saving appointment', error: err.message });
-  }
-});
-
-// Contact Route
-app.post('/api/contact', async (req, res) => {
-  try {
-    const newContact = new Contact(req.body);
-    await newContact.save();
-    res.status(200).json({ message: 'Contact form submitted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error, please try again later' });
-  }
-});
-
-// Grooming Booking
-app.post('/api/book-groom-appointment', async (req, res) => {
-  try {
-    const newBooking = new GroomingBooking(req.body);
-    await newBooking.save();
-    res.status(200).json({ message: 'Booking submitted successfully!', booking: newBooking });
-  } catch (error) {
-    res.status(500).json({ message: 'Error while submitting booking', error });
-  }
-});
-
-// Pet Mating Request
-app.post('/api/mating-requests', async (req, res) => {
-  try {
-    const newRequest = new MatingRequest(req.body);
-    await newRequest.save();
-    res.status(201).json({ message: 'Request submitted successfully' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Pet Café Booking
-app.post('/api/book-cafe', async (req, res) => {
-  try {
-    const newCafeBooking = new CafeBooking(req.body);
-    await newCafeBooking.save();
-    res.json({ message: 'Cafe booking confirmed successfully!' });
-  } catch (err) {
-    res.status(500).json({ message: 'Booking failed. Try again.' });
-  }
-});
-
-// Pet Ticketing
-app.post('/api/pet-ticket', async (req, res) => {
-  console.log("Incoming Pet Ticket Request:", req.body); // ✅ Add this
-  try {
-    const newTicket = new PetTicket(req.body);
-    await newTicket.save();
-    res.json({ success: true, message: 'Booking saved!' });
-  } catch (err) {
-    console.error("Error saving pet ticket:", err); // ✅ Log the actual error
-    res.status(500).json({ success: false, message: 'Internal Server Error' });
-  }
-});
-
-
-
-//profileform start
-
-// Multer setup
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) =>
-    cb(null, Date.now() + '-' + file.originalname)
-});
-const upload = multer({ storage });
-
-// Mongoose schema
+// User Profile Schema
 const userSchema = new mongoose.Schema({
   username: String,
   email: String,
@@ -202,16 +103,117 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', userSchema);
 
-// POST user
+
+
+
+/* ========= Multer Setup ========= */
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+});
+const upload = multer({ storage });
+
+/* ========= Routes ========= */
+
+
+
+// Appointment
+app.post('/api/appointment', async (req, res) => {
+  try {
+    const newAppointment = new Appointment(req.body);
+    await newAppointment.save();
+    res.status(201).json({ message: 'Appointment saved successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error saving appointment', error: err.message });
+  }
+});
+
+// ✅ Pet Event Booking Route
+app.post('/api/book-event', async (req, res) => {
+  try {
+    const { name, email, eventName } = req.body;
+
+    if (!name || !email || !eventName) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const newBooking = new PetEventBooking({ name, email, eventName });
+    await newBooking.save();
+
+    res.status(200).json({ message: 'Event booking successful' });
+  } catch (err) {
+    console.error('Event booking error:', err);
+    res.status(500).json({ message: 'Failed to book event', error: err.message });
+  }
+});
+
+// Contact
+app.post('/api/contact', async (req, res) => {
+  try {
+    const newContact = new Contact(req.body);
+    await newContact.save();
+    res.status(200).json({ message: 'Contact form submitted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error, please try again later' });
+  }
+});
+
+// Grooming
+app.post('/api/book-groom-appointment', async (req, res) => {
+  try {
+    const newBooking = new GroomingBooking(req.body);
+    await newBooking.save();
+    res.status(200).json({ message: 'Booking submitted successfully!', booking: newBooking });
+  } catch (error) {
+    res.status(500).json({ message: 'Error while submitting booking', error });
+  }
+});
+
+// Mating
+app.post('/api/mating-requests', async (req, res) => {
+  try {
+    const newRequest = new MatingRequest(req.body);
+    await newRequest.save();
+    res.status(201).json({ message: 'Request submitted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Pet Café
+app.post('/api/book-cafe', async (req, res) => {
+  try {
+    const newCafeBooking = new CafeBooking(req.body);
+    await newCafeBooking.save();
+    res.json({ message: 'Cafe booking confirmed successfully!' });
+  } catch (err) {
+    res.status(500).json({ message: 'Booking failed. Try again.' });
+  }
+});
+
+// Pet Ticket
+app.post('/api/pet-ticket', async (req, res) => {
+  console.log("Incoming Pet Ticket Request:", req.body);
+  try {
+    const newTicket = new PetTicket(req.body);
+    await newTicket.save();
+    res.json({ success: true, message: 'Booking saved!' });
+  } catch (err) {
+    console.error("Error saving pet ticket:", err);
+    res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+});
+
+// Profile - Create/Update
 app.post('/api/user', upload.single('profileImage'), async (req, res) => {
-  const { username, email, contact, gender, location,dob, bio } = req.body;
+  const { username, email, contact, gender, location, dob, bio } = req.body;
   const profileImage = req.file ? `/uploads/${req.file.filename}` : null;
 
   try {
     const existing = await User.findOne({ email });
     if (existing) {
       await User.updateOne({ email }, {
-        username, contact, gender, location,dob, bio, profileImage
+        username, contact, gender, location, dob, bio, profileImage
       });
       return res.status(200).send('Updated');
     }
@@ -221,22 +223,20 @@ app.post('/api/user', upload.single('profileImage'), async (req, res) => {
     });
 
     await newUser.save();
-res.status(200).json({ message: 'User saved', profileImage });
+    res.status(200).json({ message: 'User saved', profileImage });
   } catch (err) {
     console.error(err);
     res.status(500).send('Failed to save user');
   }
 });
- app.put('/api/user/:email', async (req, res) => {
+
+// Profile - Update by email
+app.put('/api/user/:email', async (req, res) => {
   const { email } = req.params;
   const updateData = req.body;
 
   try {
-    const user = await User.findOneAndUpdate(
-      { email },
-      { $set: updateData },
-      { new: true }
-    );
+    const user = await User.findOneAndUpdate({ email }, { $set: updateData }, { new: true });
     if (!user) return res.status(404).send('User not found');
     res.status(200).json(user);
   } catch (err) {
@@ -245,7 +245,7 @@ res.status(200).json({ message: 'User saved', profileImage });
   }
 });
 
-// GET user by email
+// Profile - Get by email
 app.get('/api/user/:email', async (req, res) => {
   try {
     const user = await User.findOne({ email: req.params.email });
@@ -257,10 +257,9 @@ app.get('/api/user/:email', async (req, res) => {
   }
 });
 
-//profileview ends
 
 
-// ✅ Start server with error handling
+/* ========= Start Server ========= */
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 }).on('error', (err) => {
