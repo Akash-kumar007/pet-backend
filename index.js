@@ -279,8 +279,6 @@
 //     console.error('Server error:', err);
 //   }
 // });
-
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
